@@ -11,7 +11,6 @@ common_src_files := \
 	fs/Ext4.cpp \
 	fs/F2fs.cpp \
 	fs/Vfat.cpp \
-	fs/Ntfs.cpp \
 	Loop.cpp \
 	Devmapper.cpp \
 	ResponseCode.cpp \

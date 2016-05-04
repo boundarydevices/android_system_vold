@@ -15,7 +15,6 @@
  */
 
 #include "fs/Vfat.h"
-#include "fs/Ntfs.h"
 #include "PublicVolume.h"
 #include "Utils.h"
 #include "VolumeManager.h"
@@ -32,7 +31,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <cutils/log.h>
 
 using android::base::StringPrintf;
 
@@ -45,7 +43,7 @@ static const char* kAsecPath = "/mnt/secure/asec";
 
 PublicVolume::PublicVolume(dev_t device) :
         VolumeBase(Type::kPublic), mDevice(device), mFusePid(0) {
-    setId(StringPrintf("public:%u:%u", major(device), minor(device)));
+    setId(StringPrintf("public:%u,%u", major(device), minor(device)));
     mDevPath = StringPrintf("/dev/block/vold/%s", getId().c_str());
 }
 
@@ -94,22 +92,16 @@ status_t PublicVolume::doDestroy() {
 
 status_t PublicVolume::doMount() {
     // TODO: expand to support mounting other filesystems
-    int ntfs = 0;
     readMetadata();
-    if (mFsType != "vfat" && mFsType != "ntfs") {
-		LOG(ERROR) << getId() << " unsupported filesystem " << mFsType;
-        	return -EIO;
+
+    if (mFsType != "vfat") {
+        LOG(ERROR) << getId() << " unsupported filesystem " << mFsType;
+        return -EIO;
     }
 
     if (vfat::Check(mDevPath)) {
-	/* try the NTFS filesystem */
-        if (!Ntfs::check(mDevPath)) {
-                ntfs = 1;
-        } else {
-                LOG(ERROR) << getId() << " failed filesystem check ";
-                return -EIO;
-        }
-
+        LOG(ERROR) << getId() << " failed filesystem check";
+        return -EIO;
     }
 
     // Use UUID as stable name, if available
@@ -139,12 +131,7 @@ status_t PublicVolume::doMount() {
         return -errno;
     }
 
-    if ( ntfs ) {
-    	if (Ntfs::doMount(mDevPath, mRawPath, false, false, false,
-		 AID_MEDIA_RW, AID_MEDIA_RW, 0007, true)) {
-	PLOG(ERROR) << getId() << "failed to mount via NTFS " << mDevPath;
-	}
-    } else if (vfat::Mount(mDevPath, mRawPath, false, false, false,
+    if (vfat::Mount(mDevPath, mRawPath, false, false, false,
             AID_MEDIA_RW, AID_MEDIA_RW, 0007, true)) {
         PLOG(ERROR) << getId() << " failed to mount " << mDevPath;
         return -EIO;
