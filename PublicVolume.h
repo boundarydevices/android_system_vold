@@ -74,6 +74,8 @@ private:
     std::string mFsUuid;
     /* User-visible filesystem label */
     std::string mFsLabel;
+    /* Filesystem label as provided in fstab */
+    std::string mFstabLabel;
     /* Mount options */
     std::string mMntOpts;
 

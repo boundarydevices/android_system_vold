@@ -27,6 +27,7 @@
 #include <android-base/stringprintf.h>
 #include <android-base/logging.h>
 #include <cutils/fs.h>
+#include <cutils/properties.h>
 #include <private/android_filesystem_config.h>
 
 #include <fcntl.h>
@@ -53,7 +54,8 @@ PublicVolume::PublicVolume(dev_t device, const std::string& nickname,
                 const std::string& fstype /* = "" */,
                 const std::string& mntopts /* = "" */) :
         VolumeBase(Type::kPublic), mDevice(device), mFusePid(0),
-        mFsType(fstype), mFsLabel(nickname), mMntOpts(mntopts) {
+        mFsType(fstype), mFsLabel(nickname), mFstabLabel(nickname),
+        mMntOpts(mntopts) {
     setId(StringPrintf("public:%u_%u", major(device), minor(device)));
     mDevPath = StringPrintf("/dev/block/vold/%s", getId().c_str());
 }
@@ -118,6 +120,10 @@ status_t PublicVolume::doMount() {
     if (!mFsUuid.empty()) {
         stableName = mFsUuid;
     }
+
+    // Override stableName with fstab label when needed
+    if (property_get_bool("vold.force_fstab_label", false))
+        stableName = mFstabLabel;
 
 #ifdef MINIVOLD
     // In recovery, directly mount to /storage/* since we have no fuse daemon
